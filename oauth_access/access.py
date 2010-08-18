@@ -4,7 +4,10 @@ import httplib2
 import logging
 import socket
 import urllib
-import urlparse
+try:
+    from urlparse import parse_qs, parse_qsl
+except ImportError:
+    from cgi import parse_qs, parse_qsl
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -161,7 +164,7 @@ class OAuthAccess(object):
                         self.access_token_url, urllib.urlencode(params)
                     )
                 ).read()
-                response = cgi.parse_qs(raw_data)
+                response = parse_qs(raw_data)
                 return OAuth20Token(
                     response["access_token"][-1],
                     int(response["expires"][-1])
@@ -285,7 +288,7 @@ class Client(oauth.Client):
         is_multipart = method == "POST" and headers.get("Content-Type", DEFAULT_CONTENT_TYPE) != DEFAULT_CONTENT_TYPE
         
         if body and method == "POST" and not is_multipart:
-            parameters = dict(urlparse.parse_qsl(body))
+            parameters = dict(parse_qsl(body))
         else:
             parameters = None
         
