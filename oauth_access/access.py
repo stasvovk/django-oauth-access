@@ -18,7 +18,7 @@ from django.contrib.sites.models import Site
 
 import oauth2 as oauth
 
-from oauth_access.exceptions import NotAuthorized, MissingToken
+from oauth_access.exceptions import NotAuthorized, MissingToken, ServiceFail
 from oauth_access.models import UserAssociation
 from oauth_access.utils.anyetree import etree
 from oauth_access.utils.loader import load_path_attr
@@ -27,11 +27,8 @@ from oauth_access.utils.loader import load_path_attr
 logger = logging.getLogger("oauth_access.access")
 
 
+
 class UnknownResponse(Exception):
-    pass
-
-
-class ServiceFail(Exception):
     pass
 
 
@@ -96,6 +93,9 @@ class OAuthAccess(object):
         parameters = {
             "oauth_callback": self.callback_url,
         }
+        scope = self.provider_scope
+        if scope is not None:
+            parameters["scope"] = ",".join(scope)
         client = oauth.Client(self.consumer)
         response, content = client.request(self.request_token_url,
             method = "POST",
@@ -165,9 +165,16 @@ class OAuthAccess(object):
                     )
                 ).read()
                 response = parse_qs(raw_data)
+                # @@@ Facebook does not return "expires",
+                # yet its tokens expire after 2 hours
+                # unless the user grants the "Offline Access"
+                # extended permission.
+                expires = response.get("expires",None)
+                if expires:
+                    expires = int(expires[-1])
                 return OAuth20Token(
                     response["access_token"][-1],
-                    int(response["expires"][-1])
+                    expires
                 )
             else:
                 # @@@ this error case is not nice
