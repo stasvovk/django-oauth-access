@@ -228,9 +228,11 @@ class OAuthAccess(object):
         else:
             return assoc.user
     
-    def make_api_call(self, kind, url, token, method="GET", **kwargs):
+    def make_api_call(self, kind, url, token, method="GET", headers=None, **kwargs):
         if isinstance(token, OAuth20Token):
             request_kwargs = dict(method=method)
+            if headers:
+                request_kwargs['headers'] = headers
             if method == "POST":
                 params = {
                     "access_token": str(token),
@@ -248,6 +250,8 @@ class OAuthAccess(object):
             # @@@ LinkedIn requires Authorization header which is supported in
             # sub-classed version of Client (originally from oauth2)
             request_kwargs = dict(method=method, force_auth_header=True)
+            if headers:
+                request_kwargs['headers'] = headers
             if method == "POST":
                 request_kwargs["body"] = urllib.urlencode(kwargs["params"])
             response, content = client.request(url, **request_kwargs)
